@@ -1,0 +1,9 @@
+Installation Instructions
+*************************
+
+ # mkdir build 
+ # cd build
+ # cmake ..
+ # make install
+ 
+ If it doesn't work, please open a ticket

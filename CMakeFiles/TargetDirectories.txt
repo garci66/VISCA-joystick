@@ -1,0 +1,5 @@
+C:/Users/Diego/Documents/Visual Studio 2010/Projects/libVISCA2-master/CMakeFiles/ALL_BUILD.dir
+C:/Users/Diego/Documents/Visual Studio 2010/Projects/libVISCA2-master/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Diego/Documents/Visual Studio 2010/Projects/libVISCA2-master/examples/CMakeFiles/testvisca.dir
+C:/Users/Diego/Documents/Visual Studio 2010/Projects/libVISCA2-master/visca/CMakeFiles/visca.dir
+C:/Users/Diego/Documents/Visual Studio 2010/Projects/libVISCA2-master/examples/CMakeFiles/visca_cli.dir
