@@ -27,7 +27,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	JOYCAPS joyCaps;
 	int JoyPresent;
 	uint8_t max_pan_speed, max_tilt_speed;
-	double pan_speed_scale, tilt_speed_scale, zoom_speed_scale;
+	double pan_speed_scale, tilt_speed_scale, zoom_speed_scale, sensibility;
 	SAVED_POINT positions[MAX_MEMS];
 	SAVED_POINT temp_point ={0,0,0,0,0,0};
 	for (int j=0;j<MAX_MEMS;j++){
@@ -289,14 +289,16 @@ int _tmain(int argc, _TCHAR* argv[])
 		*/
 
 		//_RPTF4(_CRT_WARN,"X:%d Y:%d Z:%d T:%d\n", joyInfoEx.dwXpos, joyInfoEx.dwYpos, joyInfoEx.dwZpos, joyInfoEx.dwRpos); 
+		sensibility = 0.1+joyInfoEx.dwZpos/(2*JOY_MIDP)*0.9;
 
 		delta_pan = (int)joyInfoEx.dwXpos - JOY_MIDP;
 		delta_tilt = (int)joyInfoEx.dwYpos - JOY_MIDP;
 		delta_zoom = (int)joyInfoEx.dwRpos - JOY_MIDP;
+		
 
 		if ( abs(delta_pan) > JOY_DEADZONE ){
 			pan_dir = (delta_pan>0)?PANRIGHT:PANLEFT;
-			pan_speed = (int)floor((abs(delta_pan)-JOY_DEADZONE)*pan_speed_scale);
+			pan_speed = (int)floor((abs(delta_pan)-JOY_DEADZONE)*pan_speed_scale*sensibility);
 			pan_dir=(pan_speed>0)?pan_dir:PANSTOP; //if effective camera speed is 0, then stop
 		}else{
 			pan_dir=PANSTOP;
@@ -305,7 +307,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		if ( abs(delta_tilt) > JOY_DEADZONE ){
 			tilt_dir = (delta_tilt>0)?TILTUP:TILTDOWN;
-			tilt_speed = (int)floor((abs(delta_tilt)-JOY_DEADZONE)*tilt_speed_scale);
+			tilt_speed = (int)floor((abs(delta_tilt)-JOY_DEADZONE)*tilt_speed_scale*sensibility);
 			tilt_dir=(tilt_speed>0)?tilt_dir:TILTSTOP; //if effective camera speed is 0, then stop
 		}else{
 			tilt_dir=TILTSTOP;
@@ -314,7 +316,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		if ( abs(delta_zoom) > JOY_DEADZONE ){
 			zoom_dir = (delta_zoom>0)?ZOOMTELE:ZOOMWIDE;
-			zoom_speed = (int)floor((abs(delta_zoom)-JOY_DEADZONE)*zoom_speed_scale);
+			zoom_speed = (int)floor((abs(delta_zoom)-JOY_DEADZONE)*zoom_speed_scale*sensibility);
 			zoom_dir=(zoom_speed>0)?zoom_dir:ZOOMSTOP;
 			if (zoom_dir==ZOOMTELE){
 				VISCA_set_zoom_tele_speed(&iface, &cameras[current_camera], zoom_speed);
