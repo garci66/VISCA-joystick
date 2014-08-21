@@ -61,6 +61,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			cameras[i].address,	cameras[i].vendor, cameras[i].model, cameras[i].rom_version, cameras[i].socket_num);
 		VISCA_set_dzoom(&iface, &cameras[i], 3); //disable digital zoom - value is 3 to disable!
 	}
+
 	//VISCA_get_camera_info(&iface, &camera);
 	//fprintf(stderr,"Some camera info:\n------------------\n");
 	//fprintf(stderr,"vendor: 0x%04x\n model: 0x%04x\n ROM version: 0x%04x\n socket number: 0x%02x\n",
@@ -126,6 +127,14 @@ int _tmain(int argc, _TCHAR* argv[])
 				backlight[current_camera]=false;
 			}
 		}
+
+		//Use button 5 to enable/disable broadcast
+		//if (edge_buttons & BUTTON5)
+		//{
+		//	iface.broadcast ^=1; //toggle broadcast
+		//	printf("Broadcast mode is now %d\n",iface.broadcast);
+		//}
+		//
 
 		//Use button 3 to decrement current camera - button 4 to increment
 		if (edge_buttons & (BUTTON3|BUTTON4))
