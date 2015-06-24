@@ -27,6 +27,7 @@ struct SAVED_POINT {
 	bool backlight; 
 	int camera;
 	bool saved;
+	uint16_t exposure;
 };
 
 #define BUTTON1  0x0001

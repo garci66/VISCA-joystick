@@ -59,7 +59,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		VISCA_get_camera_info(&iface, &cameras[i]);
 		printf("Camera: %d - vendor: 0x%04x\n model: 0x%04x\n ROM version: 0x%04x\n socket number: 0x%02x\n",
 			cameras[i].address,	cameras[i].vendor, cameras[i].model, cameras[i].rom_version, cameras[i].socket_num);
-		VISCA_set_dzoom(&iface, &cameras[i], 3); //disable digital zoom - value is 3 to disable!
+		VISCA_set_dzoom(&iface, &cameras[i], VISCA_OFF); //disable digital zoom 
+		VISCA_set_exp_comp_power(&iface, &cameras[i], VISCA_ON); //enable exposure compensation
 	}
 
 	//VISCA_get_camera_info(&iface, &camera);
@@ -88,6 +89,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	int delta_pan, delta_tilt, delta_zoom;
 	DWORD past_buttons=0;
 	DWORD edge_buttons=0;
+	DWORD past_POV = JOY_POVCENTERED;
+	DWORD edge_POV = JOY_POVCENTERED;
+
 	bool backlight[MAX_CAMS]={false};
 	//bool backlight=false;
 
@@ -113,20 +117,43 @@ int _tmain(int argc, _TCHAR* argv[])
 		//Store the current button presses as the "old" for next iteration
 		past_buttons=joyInfoEx.dwButtons;
 
+		if (past_POV == (edge_POV = joyInfoEx.dwPOV))
+			edge_POV = JOY_POVCENTERED;
+		past_POV = joyInfoEx.dwPOV;
+
 		
 		//Use button 6 to control backlight on/off
 		
 		if (edge_buttons & BUTTON6){
 			if (!backlight[current_camera]){
-				VISCA_set_backlight_comp(&iface, &cameras[current_camera],2);
+				VISCA_set_backlight_comp(&iface, &cameras[current_camera],VISCA_ON);
 				printf("Camera %d - Backlight on\n",current_camera+1);
 				backlight[current_camera]=true;
 			}else{
-				VISCA_set_backlight_comp(&iface, &cameras[current_camera],3);
+				VISCA_set_backlight_comp(&iface, &cameras[current_camera],VISCA_OFF);
 				printf("Camera %d - Backlight off\n",current_camera+1);
 				backlight[current_camera]=false;
 			}
 		}
+
+
+		//Use button 5 to reset exposure compensation
+
+		if (edge_buttons & BUTTON5){
+			VISCA_set_exp_comp_reset(&iface, &cameras[current_camera]);
+			printf("Camera %d - exposure compensation reset\n", current_camera + 1);
+		}
+
+		if (edge_POV == JOY_POVFORWARD) {
+			VISCA_set_exp_comp_up(&iface, &cameras[current_camera]);
+			printf("Camera %d - exposure compensation up\n", current_camera + 1);
+		}
+		if (edge_POV == JOY_POVBACKWARD) {
+			VISCA_set_exp_comp_down(&iface, &cameras[current_camera]);
+			printf("Camera %d - exposure compensation down\n", current_camera + 1);
+		}
+
+		
 
 		//Use button 5 to enable/disable broadcast
 		//if (edge_buttons & BUTTON5)
@@ -165,6 +192,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			temp_point.zoom_pos=0;
 			temp_point.saved=false;
 			temp_point.backlight=false;
+			temp_point.exposure = 0;
 
 			if ( edge_buttons & (BUTTON7|BUTTON8|BUTTON9|BUTTON10|BUTTON11|BUTTON12)){
 				
@@ -172,6 +200,7 @@ int _tmain(int argc, _TCHAR* argv[])
 				//Get current camera position
 				VISCA_get_pantilt_position(&iface, &cameras[current_camera], &temp_point.pan_pos, &temp_point.tilt_pos);
 				VISCA_get_zoom_value(&iface, &cameras[current_camera], &temp_point.zoom_pos);
+				VISCA_get_exp_comp_value(&iface, &cameras[current_camera], &temp_point.exposure);
 				temp_point.camera=current_camera;
 				temp_point.saved=true;
 				temp_point.backlight=backlight[current_camera];
@@ -258,7 +287,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					temp_point.pan_pos,temp_point.tilt_pos,temp_point.zoom_pos, temp_point.backlight?"on":"off");
 				VISCA_set_pantilt_absolute_position(&iface, &cameras[restore_camera], max_pan_speed,max_tilt_speed,temp_point.pan_pos, temp_point.tilt_pos);
 				VISCA_set_zoom_value(&iface, &cameras[restore_camera],temp_point.zoom_pos);
-				VISCA_set_backlight_comp(&iface, &cameras[restore_camera],temp_point.backlight?2:3);
+				VISCA_set_backlight_comp(&iface, &cameras[restore_camera],temp_point.backlight?VISCA_ON:VISCA_OFF);
+				VISCA_set_exp_comp_value(&iface, &cameras[restore_camera], temp_point.exposure);
 				printf("Position restored - Input resumed\n");
 			} else {
 				printf("No position saved in this memory slot\n");
@@ -268,7 +298,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (joyInfoEx.dwButtons & BUTTON1)
 		{
 			//system("cls");
-			for (int i=0;i<max_cameras;i++)
+			printf("Joystick position: X:%d Y:%d Z:%d R:%d\n", joyInfoEx.dwXpos, joyInfoEx.dwYpos, joyInfoEx.dwZpos, joyInfoEx.dwRpos);
+			for (int i = 0; i < max_cameras; i++)
 			{
 				VISCA_get_pantilt_position(&iface, &cameras[i], &temp_point.pan_pos, &temp_point.tilt_pos);
 				VISCA_get_zoom_value(&iface, &cameras[i], &temp_point.zoom_pos);
@@ -289,7 +320,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		*/
 
 		//_RPTF4(_CRT_WARN,"X:%d Y:%d Z:%d T:%d\n", joyInfoEx.dwXpos, joyInfoEx.dwYpos, joyInfoEx.dwZpos, joyInfoEx.dwRpos); 
-		sensibility = 0.1+joyInfoEx.dwZpos/(2*JOY_MIDP)*0.9;
+		//sensibility = 0.1 + (2 * JOY_MIDP- joyInfoEx.dwZpos) / (2 * JOY_MIDP)*0.9;
+		sensibility = 1;
 
 		delta_pan = (int)joyInfoEx.dwXpos - JOY_MIDP;
 		delta_tilt = (int)joyInfoEx.dwYpos - JOY_MIDP;
